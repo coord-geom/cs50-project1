@@ -41,17 +41,25 @@ def random(request):
     # return page(request, entries[x])
     return HttpResponseRedirect(reverse("title", kwargs={"title": entries[x]}))
 
+def edit(request, title):
+    if request.method == "GET":
+        return render(request, "encyclopedia/edit.html", {
+            "title": title,
+            "content": util.get_entry(title)
+        })
+    elif request.method == "POST":
+        util.save_entry(title, request.POST['edited_content'])
+        return HttpResponseRedirect(reverse("title", kwargs={"title": title}))
+
 def title(request, title):
     string = util.get_entry(title)
     if string == None:
         return render(request, "encyclopedia/error.html")
     else:
-        string = '{% extends "encyclopedia/layout.html" %}{% block title %}' + \
-                title + '{% endblock %}{% block body %}' + markdown(util.get_entry(title)) + '{% endblock %}'
-        file = open("encyclopedia/templates/encyclopedia/load.html", "w")
-        file.write(string)
-        file.close()
-        return render(request, "encyclopedia/load.html")
+        return render(request, "encyclopedia/title.html", {
+            "title": title,
+            "content": markdown(util.get_entry(title))
+        })
 
 
 
