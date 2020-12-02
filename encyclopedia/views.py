@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django import forms
@@ -15,8 +15,9 @@ class NewEntryForm(forms.Form):
 
 def index(request):
     return render(request, "encyclopedia/index.html", {
-        "entries": util.list_entries()
-    })
+            "entries": util.list_entries(),
+            "heading": 'All Pages'
+        })
 
 def create(request):
     if request.method == "GET":
@@ -28,11 +29,11 @@ def create(request):
         if form.is_valid():
             title = form.cleaned_data["title"]
             content = form.cleaned_data["content"]
-            if title in util.list_entries():
-                return render(request, "encyclopedia/error.html")
-            else:
-                util.save_entry(title, content)
-                return HttpResponseRedirect(reverse("title", kwargs={"title": title}))
+            for entry in util.list_entries():
+                if title.lower() == entry.lower():
+                    return HttpResponseRedirect(reverse("pagealreadyexists"))
+            util.save_entry(title, content)
+            return HttpResponseRedirect(reverse("title", kwargs={"title": title}))
 
 
 def random(request):
@@ -54,12 +55,36 @@ def edit(request, title):
 def title(request, title):
     string = util.get_entry(title)
     if string == None:
-        return render(request, "encyclopedia/error.html")
+        return HttpResponseRedirect(reverse('pagenotfound'))
     else:
         return render(request, "encyclopedia/title.html", {
             "title": title,
             "content": markdown(util.get_entry(title))
         })
+
+def search(request):
+    query = request.GET['q']
+    entries = []
+    for entry in util.list_entries():
+        if query.lower() == entry.lower():
+            return HttpResponseRedirect(reverse("title", kwargs={"title": entry}))
+        elif query.lower() in entry.lower():
+            entries.append(entry)
+    if entries == []:
+        return HttpResponseRedirect(reverse('pagenotfound'))
+    else:
+        return render(request, "encyclopedia/index.html", {
+            "heading": f"Search results for '{query}'",
+            "entries": entries
+        })
+
+def pagenotfound(request):
+    return render(request, "encyclopedia/pagenotfound.html")
+
+def pagealreadyexists(request):
+    return render(request, "encyclopedia/pagealreadyexists.html")
+
+
 
 
 
